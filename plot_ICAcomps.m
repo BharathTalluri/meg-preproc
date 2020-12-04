@@ -1,4 +1,4 @@
-function [] = plot_ICAcomps(filein, artifact_type)
+function [] = plot_ICAcomps(ID, artifact_type)
 % PLOT_ICACOMPS plots ICA components
 %   ICA components and the correpsonding timelocked data, frequency
 %   decomposotion and spectrum. Components are ordered by the coherence value
@@ -10,20 +10,13 @@ function [] = plot_ICAcomps(filein, artifact_type)
 % addpath '/mnt/homes/home024/jschipp/Surprise_Drug/meg_data/'
 % ft_defaults
 
-%filein = 'EJG-1_Surprise_20180621_02.ds';
-%artifact_type = 'blink';
-ID = [filein(1:5) filein(end-5:end-3)]; % Subject ID + Session number + file number
-if regexp(ID, 'URG_S*') % With this subject the session number was missing when registered
-    ID = ['URG-1' filein(end-5:end-3)];
-end
-
-name = ['/mnt/homes/home024/jschipp/Surprise_Drug/meg_analysis/comp_ICA/' ID(1:3) '/'];
+name = ['/mnt/homes/home024/btalluri/confirmation_spatial/data/meg/analysis/comp_ICA/' ID(1:7) '/'];
 cd(name)
 load([name 'comp_' ID '.mat'])
 
-name = ['/mnt/homes/home024/jschipp/Surprise_Drug/meg_analysis/comp_ICA/' ID(1:3) '/Matrices/'];
+name = ['/mnt/homes/home024/btalluri/confirmation_spatial/data/meg/analysis/comp_ICA/' ID(1:7) '/Matrices/'];
 cd(name)
-        
+
 load([name artifact_type '_fdcomp_' ID '.mat']);
 load([name artifact_type '_timelock_' ID '.mat']);
 load([name artifact_type '_freq_' ID '.mat']);
@@ -88,14 +81,14 @@ for f = 1:5
         ax = gca; ax.FontSize = 8;
         comp_count = comp_count + 1;
     end
-
-        fig_name = ['/mnt/homes/home024/jschipp/Surprise_Drug/meg_analysis/comp_ICA/' ID(1:3) '/' filein(5) filein(end-5:end-3) ];
-        if 7==exist(fig_name,'dir')
-            cd(fig_name)
-        else
-            mkdir(fig_name)
-            cd(fig_name)
-        end
+    
+    fig_name = ['/mnt/homes/home024/btalluri/confirmation_spatial/data/meg/analysis/comp_ICA/' ID(1:7) '/' ID(9:12)];
+    if 7==exist(fig_name,'dir')
+        cd(fig_name)
+    else
+        mkdir(fig_name)
+        cd(fig_name)
+    end
     
     coh_top = [artifact_type '_' num2str(f) 'TopCoh_' ID '.fig'];
     saveas(gca, coh_top, 'fig')

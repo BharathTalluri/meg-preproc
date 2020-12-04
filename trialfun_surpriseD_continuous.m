@@ -16,14 +16,20 @@ event = ft_read_event(cfgin.dataset);
 trgVal = [event(find(strcmp('UPPT001',{event.type}))).value]';
 trgSample = [event(find(strcmp('UPPT001',{event.type}))).sample]';
 
+
 % Find specific triggers/samples for start and end of block
 startSample = trgSample(find(trgVal==1));
 endSample = trgSample(find(trgVal==2));
 
+if strcmp(ID, 'Pilot06-4_01_1') % block was terminated midway due to some error
+    startSample(6) = [];
+end
 
 % Check whether start triggers are missing; add first start sample
 if length(startSample) < length(endSample)
     startSample = [1+round(cfgin.trialdef.prestim*hdr.Fs); startSample];
+    % changed the above line to adapt my study
+    % startSample = [trgSample(start)+round(cfgin.trialdef.prestim*hdr.Fs); startSample];
 end
 
 % Check whether stop triggers are missing (interrupted block); add end
@@ -32,7 +38,7 @@ if length(startSample) > length(endSample)
     endSample = [endSample; trgSample(end)-round(cfgin.trialdef.poststim * hdr.Fs)];
 end
 
-% Check duration of block and discard if > 1 minutes
+% Check duration of block and discard if < 1 minutes
 % In some cases EJG-1_01 there are 6 blocks identified because the task has started
 % without eyelink, actually only 4 of them are usable
 for i = 1:length(startSample)
@@ -59,9 +65,6 @@ end
 
 % define trial matrix   trial x M (M = start sample; endSample; offset)
 trl = [startSample, endSample, trlOff*ones(length(startSample),1)];
-if strcmp('UDK-1_03',ID) && cfgin.block == 4 % Do not use 4th block, it was not started on purpose
-   trl(4,:) = [];
-end
 trl = trl(cfgin.block,:);
 
 end
