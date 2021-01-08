@@ -30,11 +30,6 @@ end
 info_EL_blocks = xlsread('Info_filewise');
 idx_file = find(strcmp(files, cfgin.dataset));
 
-
-[~,drug_H] = xlsread('/mnt/homes/home024/jschipp/Surprise_Drug/drug_labelAdj.xlsx');
-subji = find(strcmp(ID(1:3),drug_H(:,1)));
-drug_cond = drug_H(subji,2);
-
 %%
 % =====================================================================
 %   INFORMATION FROM BEHAVIORAL DATA
@@ -65,7 +60,7 @@ trials_info = [];
 % BCT behav: {'trial_start', 'trial_start_int1', 'trial_start_int2', 'gen_mean_trial', 'sample_mean_trial', 'sample_mean_int1', 'sample_mean_int2', 'interm_resp', 'interm_resp_accu', 'interm_rt', 'interm_cue', 'estim_resp', 'estim_resp_accu', 'estim_rt', 'num_sacc'};
 
 for block = firstblock:lastblock % Loop through files/blocks
-    if session < 3
+    if str2double(session) < 3
         load([dir_behaviour subject(5:end) '_' session+1 '_estimation_attention_' num2str(block) '.mat'])
         load([dir_samples subject(5:end) '_' session+1 '_estimation_attention_' num2str(block) '.mat'])
     else
@@ -96,7 +91,7 @@ trg.int1On = 12;                        % Onset of interval 1
 trg.intermrespCue = 13;                 % Cue for intermittent response
 trg.int2On = 15;                        % Onset of interval 1
 trg.estimrespCue = 16;                  % Cue for estimation response
-trg.intermCue = [31 32];                % Left/right attention cue
+trg.intermDelay = 14;                   % Left/right attention cue
 trg.intermResp = [41 42 43 44 45];      % Button_click/left/right/no/bad interm response
 trg.estimResp = [51 52 53];             % good/no/bad estim response
 trg.end = 17;                           % Offset of feedback/onset of break period
@@ -113,6 +108,7 @@ trg_idx.int2On = [];
 trg_idx.estimrespCue = [];
 trg_idx.intermCue = [];
 trg_idx.intermResp = [];
+trg_idx.intermDelay = [];
 trg_idx.estimResp = [];
 trg_idx.end = [];
 trg_idx.sampleOn = [];
@@ -147,24 +143,47 @@ end
 % !!!   CHECK TRIGGERS & DEAL WITH EXCEPTIONS   !!!
 fprintf('\n\n ---------------- \n Check triggers...\n ---------------- \n\n');
 
-% Check whether the actual end is interrupted
-if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
-    trg_idx.trialOn(end) = []; % Remove last element
+if length(trg_idx.startBlock) < length(trg_idx.endBlock)
+    trg_idx.startBlock = [1 + round(cfgin.trialdef.prestim*hdr.Fs); trg_idx.startBlock]; % Add a starting point
 end
 
 if length(trg_idx.startBlock) > length(trg_idx.endBlock)
     trg_idx.endBlock = [trg_idx.endBlock; trg_idx.estimResp(end)]; % Consider the last feedback as the end of the block
 end
 
-% Check whether participant has started late
-if trg_idx.trialOn(1) > trg_idx.estimrespCue(1)
-    trg_idx.respCue(1) = [];
-    %trg_idx.resp(1) = [];
-end
+% temporary setup- remove the first, and last two blocks
+trg_idx.startBlock = trg_idx.startBlock(firstblock:lastblock);
+trg_idx.endBlock = trg_idx.endBlock(firstblock:lastblock);
 
-if length(trg_idx.startBlock) < length(trg_idx.endBlock)
-    trg_idx.startBlock = [1; trg_idx.startBlock]; % Add a starting point
-end
+% Remove response go cues and trial onset triggers before actual block start
+trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
+trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
+trg_idx.int1On = trg_idx.int1On(trg_idx.int1On >= trg_idx.startBlock(1));
+trg_idx.int2On = trg_idx.int2On(trg_idx.int2On >= trg_idx.startBlock(1));
+trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue >= trg_idx.startBlock(1));
+trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay >= trg_idx.startBlock(1));
+trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn >= trg_idx.startBlock(1));
+trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1));
+
+trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn <= trg_idx.endBlock(end));
+trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue <= trg_idx.endBlock(end));
+trg_idx.int1On = trg_idx.int1On(trg_idx.int1On <= trg_idx.endBlock(end));
+trg_idx.int2On = trg_idx.int2On(trg_idx.int2On <= trg_idx.endBlock(end));
+trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue <= trg_idx.endBlock(end));
+trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay <= trg_idx.endBlock(end));
+trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn <= trg_idx.endBlock(end));
+trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff <= trg_idx.endBlock(end));
+
+% % Check whether the actual end is interrupted
+% if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
+%     trg_idx.trialOn(end) = []; % Remove last element
+% end
+% 
+% % Check whether participant has started late
+% if trg_idx.trialOn(1) > trg_idx.estimrespCue(1)
+%     trg_idx.respCue(1) = [];
+%     %trg_idx.resp(1) = [];
+% end
 
 % Check duration of block and discard if < 1 minutes
 startBlockSamp = [event(trg_idx.startBlock).sample];
@@ -182,19 +201,14 @@ endBlockSamp(trg_idx.endBlock == 0) = [];
 trg_idx.startBlock(trg_idx.startBlock == 0) = [];
 trg_idx.endBlock(trg_idx.endBlock == 0) = [];
 
-% Remove response go cues and trial onset triggers before actual block start
-trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
-trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
-%trg_idx.resp =  trg_idx.resp(trg_idx.resp >= trg_idx.startBlock(1));
-
-% Check whether there are two response go cues between two trial onsets
-for i = 1:length(trg_idx.trialOn)
-    if trg_idx.estimrespCue(i)<trg_idx.trialOn(i)
-        i
-        trg_idx.respCue(i) = [];
-        %trg_idx.resp(i) = [];
-    end
-end
+% % Check whether there are two response go cues between two trial onsets
+% for i = 1:length(trg_idx.trialOn)
+%     if trg_idx.estimrespCue(i)<trg_idx.trialOn(i)
+%         i
+%         trg_idx.respCue(i) = [];
+%         %trg_idx.resp(i) = [];
+%     end
+% end
 
 % % Check if respCue corresponds to trialOn otherwise remove trial
 % if length(trg_idx.respCue) == length(trg_idx.trialOn)
