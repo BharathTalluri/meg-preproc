@@ -60,10 +60,8 @@ lastblock = lastblock-2;
 
 trials_info = [];
 
-% trial info to save: trial start, trial end, int1 start-500 ms, int1 end+500 ms, int2
-% start-500 ms, int2 end+500 ms, binary choice or attention cue, sample mean int2, gen
-% mean trial, binary choice, binary choice accuracy, estimation response.
-% Petzer behav: [stim resp ACC RT start_time sacc];
+% trial info to save: trial_start, trial_end, int1_start-500 ms, int1_end+500 ms, int2_start-500 ms, int2_end+500 ms, binary_choice or attention_cue, sample_mean_int2, gen_mean_trial, binary_choice, binary_choice_accuracy, estimation_response.
+% Peter behav: [stim resp ACC RT start_time sacc];
 % BCT behav: {'trial_start', 'trial_start_int1', 'trial_start_int2', 'gen_mean_trial', 'sample_mean_trial', 'sample_mean_int1', 'sample_mean_int2', 'interm_resp', 'interm_resp_accu', 'interm_rt', 'interm_cue', 'estim_resp', 'estim_resp_accu', 'estim_rt', 'num_sacc'};
 
 for block = firstblock:lastblock % Loop through files/blocks
@@ -76,7 +74,9 @@ for block = firstblock:lastblock % Loop through files/blocks
     end
     for trial = 1:length(Behav) % Loop through trials | Pull out info
         numSample = 12; % fixed number of samples in every block
-        new_trl = [block trial numSample 0 Behav(trial, 1:4)]; % Store info
+        % gen_mean_trial sample_mean_int1 sample_mean_int2
+        % binary_choice/attn_cue binary_choice_accu estim_resp
+        new_trl = [block trial numSample 0 Behav(trial, [4 6 7 8 9 11 12])]; % Store info
         trials_info = [trials_info; new_trl]; % Conactenate trials
     end
 end
@@ -91,36 +91,38 @@ end
 % _____________________________________________________________________
 %   TRIGGERS OF INTEREST
 
-trg.trialOn = 11;               % Onset of pre-sequence mask
-trg.respCue = 41;               % Cue for response
-trg.resp = [42 43 44];          % Left/right/bad response
-trg.fb = [51 52 53];            % Correct/error/bad response
-trg.end = 61;                   % Offset of feedback/onset of break period
-trg.sampleOn = 21;              % Onset individual sample
-trg.startBlock = 1;             % Start of block
-trg.endBlock = 2;               % End of block
+trg.trialOn = 11;                       % Onset of pre-sequence mask
+trg.int1On = 12;                        % Onset of interval 1
+trg.intermrespCue = 13;                 % Cue for intermittent response
+trg.int2On = 15;                        % Onset of interval 1
+trg.estimrespCue = 16;                  % Cue for estimation response
+trg.intermCue = [31 32];                % Left/right attention cue
+trg.intermResp = [41 42 43 44 45];      % Button_click/left/right/no/bad interm response
+trg.estimResp = [51 52 53];             % good/no/bad estim response
+trg.end = 17;                           % Offset of feedback/onset of break period
+trg.sampleOn = 21;                      % Onset individual sample
+trg.sampleOff = 22;                     % Offset individual sample
+trg.startBlock = 01;                    % Start of block
+trg.endBlock = 02;                      % End of block
 
 % Variable for trigger indices
 trg_idx.trialOn = [];
-trg_idx.respCue = [];
-trg_idx.resp = [];
-trg_idx.fb = [];
+trg_idx.int1On = [];
+trg_idx.intermrespCue = [];
+trg_idx.int2On = [];
+trg_idx.estimrespCue = [];
+trg_idx.intermCue = [];
+trg_idx.intermResp = [];
+trg_idx.estimResp = [];
 trg_idx.end = [];
 trg_idx.sampleOn = [];
+trg_idx.sampleOff = [];
 trg_idx.startBlock = [];
 trg_idx.endBlock = [];
 
 trl = []; % function output, matrix to store trial information
 % _____________________________________________________________________
 
-
-% Path data - NOTE: subject tested by Julia located in a
-% different folder
-if cfgin.idx < 229
-    cd '/mnt/homes/home024/pmurphy/meg_data/surpriseD';
-else
-    cd '/mnt/homes/home024/jschipp/Surprise_Drug/meg_data/';
-end
 % Read header and event information
 
 hdr = ft_read_header(cfgin.dataset);
@@ -146,16 +148,16 @@ end
 fprintf('\n\n ---------------- \n Check triggers...\n ---------------- \n\n');
 
 % Check whether the actual end is interrupted
-if trg_idx.trialOn(end) > trg_idx.respCue(end)
+if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
     trg_idx.trialOn(end) = []; % Remove last element
 end
 
 if length(trg_idx.startBlock) > length(trg_idx.endBlock)
-    trg_idx.endBlock = [trg_idx.endBlock; trg_idx.fb(end)]; % Consider the last feedback as the end of the block
+    trg_idx.endBlock = [trg_idx.endBlock; trg_idx.estimResp(end)]; % Consider the last feedback as the end of the block
 end
 
 % Check whether participant has started late
-if trg_idx.trialOn(1) > trg_idx.respCue(1)
+if trg_idx.trialOn(1) > trg_idx.estimrespCue(1)
     trg_idx.respCue(1) = [];
     %trg_idx.resp(1) = [];
 end
@@ -164,13 +166,11 @@ if length(trg_idx.startBlock) < length(trg_idx.endBlock)
     trg_idx.startBlock = [1; trg_idx.startBlock]; % Add a starting point
 end
 
-% Check duration of block and discard if < 3 minutes
-% In some cases there are 6 blocks identified because the task has started
-% without eyelink, actually only 4 of them are usable (e.g. EJG-1)
+% Check duration of block and discard if < 1 minutes
 startBlockSamp = [event(trg_idx.startBlock).sample];
 endBlockSamp = [event(trg_idx.endBlock).sample];
 for i = 1:length(trg_idx.startBlock)
-    if (endBlockSamp(i)-startBlockSamp(i))/hdr.Fs < 180 % 180 seconds
+    if (endBlockSamp(i)-startBlockSamp(i))/hdr.Fs < 60 % 180 seconds
         trg_idx.startBlock(i) = 0; % Set the start/end trigger samples that are not useable to zero to remove them afterwards
         trg_idx.endBlock(i) = 0;
     end
@@ -182,15 +182,14 @@ endBlockSamp(trg_idx.endBlock == 0) = [];
 trg_idx.startBlock(trg_idx.startBlock == 0) = [];
 trg_idx.endBlock(trg_idx.endBlock == 0) = [];
 
-% Remove response go cues and trial onset triggers ebfore actual block start
+% Remove response go cues and trial onset triggers before actual block start
 trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
-trg_idx.respCue = trg_idx.respCue(trg_idx.respCue >= trg_idx.startBlock(1));
+trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
 %trg_idx.resp =  trg_idx.resp(trg_idx.resp >= trg_idx.startBlock(1));
 
 % Check whether there are two response go cues between two trial onsets
-% e.g. EJG-1
 for i = 1:length(trg_idx.trialOn)
-    if trg_idx.respCue(i)<trg_idx.trialOn(i)
+    if trg_idx.estimrespCue(i)<trg_idx.trialOn(i)
         i
         trg_idx.respCue(i) = [];
         %trg_idx.resp(i) = [];
@@ -239,15 +238,7 @@ for start_block = trg_idx.startBlock'
     ntrial_meg = 0;
     
     nblock = nblock+1;
-    
-    if strcmp(ID,'UDK-1_03') && nblock == 4
-        nblock = 5;
-    elseif strcmp(ID,'UOC-1_01')  && nblock == 1
-        nblock = nblock+2;
-    elseif strcmp(ID,'UOC-1_03') && nblock == 3
-        nblock = nblock+4;
-    end
-    
+
     fprintf('\n\n ---------------- \n Loop through blocks #%d\n ---------------- \n\n', nblock);
     currBlock = trg_idx.endBlock(find(trg_idx.endBlock > start_block, 1, 'first'));
     

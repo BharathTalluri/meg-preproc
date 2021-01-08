@@ -39,8 +39,6 @@ if length(startSample) > length(endSample)
 end
 
 % Check duration of block and discard if < 1 minutes
-% In some cases EJG-1_01 there are 6 blocks identified because the task has started
-% without eyelink, actually only 4 of them are usable
 for i = 1:length(startSample)
     if (endSample(i)-startSample(i))/hdr.Fs < 60 % 60 seconds 
         startSample(i) = 0; % Set the start/end trigger samples that are not useable to zero to remove them afterwards
