@@ -106,7 +106,7 @@ trg_idx.int1On = [];
 trg_idx.intermrespCue = [];
 trg_idx.int2On = [];
 trg_idx.estimrespCue = [];
-trg_idx.intermCue = [];
+% trg_idx.intermCue = [];
 trg_idx.intermResp = [];
 trg_idx.intermDelay = [];
 trg_idx.estimResp = [];
@@ -151,6 +151,7 @@ if length(trg_idx.startBlock) > length(trg_idx.endBlock)
     trg_idx.endBlock = [trg_idx.endBlock; trg_idx.estimResp(end)]; % Consider the last feedback as the end of the block
 end
 
+if 0
 % temporary setup- remove the first, and last two blocks
 trg_idx.startBlock = trg_idx.startBlock(firstblock:lastblock);
 trg_idx.endBlock = trg_idx.endBlock(firstblock:lastblock);
@@ -173,6 +174,7 @@ trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue <= trg_idx.e
 trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay <= trg_idx.endBlock(end));
 trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn <= trg_idx.endBlock(end));
 trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff <= trg_idx.endBlock(end));
+end
 
 % % Check whether the actual end is interrupted
 % if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
@@ -264,22 +266,34 @@ for start_block = trg_idx.startBlock'
     
     % Create vectors containing only samples from current meg block
     trialOn_block = trg_idx.trialOn(find(trg_idx.trialOn <= currBlock & trg_idx.trialOn >= start_block));
-    respCue_block = trg_idx.respCue(find(trg_idx.respCue <= currBlock & trg_idx.respCue >= start_block));
-    resp_block =  trg_idx.resp(find(trg_idx.resp <= currBlock & trg_idx.resp >= start_block));
+    int1On_block = trg_idx.int1On(find(trg_idx.int1On <= currBlock & trg_idx.int1On >= start_block));
+    int2On_block = trg_idx.int2On(find(trg_idx.int2On <= currBlock & trg_idx.int2On >= start_block));
+    estimrespCue_block = trg_idx.estimrespCue(find(trg_idx.estimrespCue <= currBlock & trg_idx.estimrespCue >= start_block));
+    estimresp_block =  trg_idx.estimresp(find(trg_idx.estimresp <= currBlock & trg_idx.estimresp >= start_block));
     fb_block = trg_idx.fb(find(trg_idx.fb <= currBlock & trg_idx.fb >= start_block));
     sampleOn_block = trg_idx.sampleOn(find(trg_idx.sampleOn <= currBlock & trg_idx.sampleOn >= start_block));
     
+    % Remove response go cues and trial onset triggers before actual block start
+trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
+trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
+trg_idx.int1On = trg_idx.int1On(trg_idx.int1On >= trg_idx.startBlock(1));
+trg_idx.int2On = trg_idx.int2On(trg_idx.int2On >= trg_idx.startBlock(1));
+trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue >= trg_idx.startBlock(1));
+trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay >= trg_idx.startBlock(1));
+trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn >= trg_idx.startBlock(1));
+trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1));
+    
     % Remove one trialOn_block, if block was interrupted, SInce no response
     % was given in the last trial for pressing "Esc"
-    if length(respCue_block) > length(resp_block)
+    if length(estimrespCue_block) > length(estimresp_block)
         trialOn_block(end) = [];
-        respCue_block(end) = [];
+        estimrespCue_block(end) = [];
     end
     
     % !!! Exception - Something weird happend in trial 62, to make sure
     % that alignment is still correct, remove trials from 62-end
     if strcmp(ID,'XUE-2_04') && nblock == 7
-        respCue_block(62:end) = []; trialOn_block(62:end) = [];
+        estimrespCue_block(62:end) = []; trialOn_block(62:end) = [];
         trials_behavBlock = trials_behavBlock(1:61,:);
     end
     
@@ -306,7 +320,7 @@ for start_block = trg_idx.startBlock'
     for i = loop_vec
         %for i =  length(trialOn_block):-1:63
         % Check whether numer of samples are the same for meg & behav
-        num_samp_trl = find(sampleOn_block>trialOn_block(i) & sampleOn_block<respCue_block(i));
+        num_samp_trl = find(sampleOn_block>trialOn_block(i) & sampleOn_block<estimrespCue_block(i));
         if length(num_samp_trl) <= 10 % Something went wrong - more than 10 samples between trialOn and respCue
             while ~(length(num_samp_trl) ==  trials_behavBlock(trl_behavIdx,3))
                 trl_behavIdx = trl_behavIdx - 1;
@@ -339,7 +353,7 @@ for start_block = trg_idx.startBlock'
         end
         
         % Determine where the trial ends (default response cue)
-        k = respCue_block(ntrial_meg);
+        k = estimrespCue_block(ntrial_meg);
         if isfield(cfgin.trialdef, 'poststim')
             trlEnd = event(k).sample + round(cfgin.trialdef.poststim*hdr.Fs);  % Shift trial end
         else
