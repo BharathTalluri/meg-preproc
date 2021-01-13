@@ -52,7 +52,7 @@ dir_samples = [dir_behav subject '/S' session+1 '/Sample_seqs/'];
 
 firstblock = firstblock + 1;
 lastblock = lastblock-2;
-
+nblock = nblock + 1;
 trials_info = [];
 
 % trial info to save: trial_start, trial_end, int1_start-500 ms, int1_end+500 ms, int2_start-500 ms, int2_end+500 ms, binary_choice or attention_cue, sample_mean_int2, gen_mean_trial, binary_choice, binary_choice_accuracy, estimation_response.
@@ -143,49 +143,17 @@ end
 % !!!   CHECK TRIGGERS & DEAL WITH EXCEPTIONS   !!!
 fprintf('\n\n ---------------- \n Check triggers...\n ---------------- \n\n');
 
+if strcmp(ID, 'Pilot06-4_01_1') % block was terminated midway due to some error
+    trg_idx.startBlock(6) = [];
+end
+
 if length(trg_idx.startBlock) < length(trg_idx.endBlock)
-    trg_idx.startBlock = [1 + round(cfgin.trialdef.prestim*hdr.Fs); trg_idx.startBlock]; % Add a starting point
+    trg_idx.startBlock = [trg_idx.trialOn(1); trg_idx.startBlock]; % Add a starting point
 end
 
 if length(trg_idx.startBlock) > length(trg_idx.endBlock)
-    trg_idx.endBlock = [trg_idx.endBlock; trg_idx.estimResp(end)]; % Consider the last feedback as the end of the block
+    trg_idx.endBlock = [trg_idx.endBlock; trg_idx.end(end)]; % Consider the last feedback as the end of the block
 end
-
-if 0
-% temporary setup- remove the first, and last two blocks
-trg_idx.startBlock = trg_idx.startBlock(firstblock:lastblock);
-trg_idx.endBlock = trg_idx.endBlock(firstblock:lastblock);
-
-% Remove response go cues and trial onset triggers before actual block start
-trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
-trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
-trg_idx.int1On = trg_idx.int1On(trg_idx.int1On >= trg_idx.startBlock(1));
-trg_idx.int2On = trg_idx.int2On(trg_idx.int2On >= trg_idx.startBlock(1));
-trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue >= trg_idx.startBlock(1));
-trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay >= trg_idx.startBlock(1));
-trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn >= trg_idx.startBlock(1));
-trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1));
-
-trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn <= trg_idx.endBlock(end));
-trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue <= trg_idx.endBlock(end));
-trg_idx.int1On = trg_idx.int1On(trg_idx.int1On <= trg_idx.endBlock(end));
-trg_idx.int2On = trg_idx.int2On(trg_idx.int2On <= trg_idx.endBlock(end));
-trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue <= trg_idx.endBlock(end));
-trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay <= trg_idx.endBlock(end));
-trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn <= trg_idx.endBlock(end));
-trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff <= trg_idx.endBlock(end));
-end
-
-% % Check whether the actual end is interrupted
-% if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
-%     trg_idx.trialOn(end) = []; % Remove last element
-% end
-% 
-% % Check whether participant has started late
-% if trg_idx.trialOn(1) > trg_idx.estimrespCue(1)
-%     trg_idx.respCue(1) = [];
-%     %trg_idx.resp(1) = [];
-% end
 
 % Check duration of block and discard if < 1 minutes
 startBlockSamp = [event(trg_idx.startBlock).sample];
@@ -202,6 +170,46 @@ startBlockSamp(trg_idx.startBlock == 0) = [];
 endBlockSamp(trg_idx.endBlock == 0) = [];
 trg_idx.startBlock(trg_idx.startBlock == 0) = [];
 trg_idx.endBlock(trg_idx.endBlock == 0) = [];
+
+if 1
+    % temporary setup- remove the first, and last two blocks
+    trg_idx.startBlock = trg_idx.startBlock(firstblock:lastblock);
+    trg_idx.endBlock = trg_idx.endBlock(firstblock:lastblock);
+    
+    % Remove response go cues and trial onset triggers before actual block start
+    trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
+    trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
+    trg_idx.int1On = trg_idx.int1On(trg_idx.int1On >= trg_idx.startBlock(1));
+    trg_idx.int2On = trg_idx.int2On(trg_idx.int2On >= trg_idx.startBlock(1));
+    trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue >= trg_idx.startBlock(1));
+    trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay >= trg_idx.startBlock(1));
+    trg_idx.estimResp = trg_idx.estimResp(trg_idx.estimResp >= trg_idx.startBlock(1));
+    trg_idx.end = trg_idx.end(trg_idx.end >= trg_idx.startBlock(1));
+    trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn >= trg_idx.startBlock(1));
+    trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1));
+    
+    trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn <= trg_idx.endBlock(end));
+    trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue <= trg_idx.endBlock(end));
+    trg_idx.int1On = trg_idx.int1On(trg_idx.int1On <= trg_idx.endBlock(end));
+    trg_idx.int2On = trg_idx.int2On(trg_idx.int2On <= trg_idx.endBlock(end));
+    trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue <= trg_idx.endBlock(end));
+    trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay <= trg_idx.endBlock(end));
+    trg_idx.estimResp = trg_idx.estimResp(trg_idx.estimResp <= trg_idx.endBlock(end));
+    trg_idx.end = trg_idx.end(trg_idx.end <= trg_idx.endBlock(end));
+    trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn <= trg_idx.endBlock(end));
+    trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff <= trg_idx.endBlock(end));
+end
+
+% % Check whether the actual end is interrupted
+% if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
+%     trg_idx.trialOn(end) = []; % Remove last element
+% end
+%
+% % Check whether participant has started late
+% if trg_idx.trialOn(1) > trg_idx.estimrespCue(1)
+%     trg_idx.respCue(1) = [];
+%     %trg_idx.resp(1) = [];
+% end
 
 % % Check whether there are two response go cues between two trial onsets
 % for i = 1:length(trg_idx.trialOn)
@@ -254,7 +262,7 @@ for start_block = trg_idx.startBlock'
     ntrial_meg = 0;
     
     nblock = nblock+1;
-
+    
     fprintf('\n\n ---------------- \n Loop through blocks #%d\n ---------------- \n\n', nblock);
     currBlock = trg_idx.endBlock(find(trg_idx.endBlock > start_block, 1, 'first'));
     
@@ -267,25 +275,21 @@ for start_block = trg_idx.startBlock'
     % Create vectors containing only samples from current meg block
     trialOn_block = trg_idx.trialOn(find(trg_idx.trialOn <= currBlock & trg_idx.trialOn >= start_block));
     int1On_block = trg_idx.int1On(find(trg_idx.int1On <= currBlock & trg_idx.int1On >= start_block));
+    intermrespCue_block = trg_idx.intermrespCue(find(trg_idx.intermrespCue <= currBlock & trg_idx.intermrespCue >= start_block));
     int2On_block = trg_idx.int2On(find(trg_idx.int2On <= currBlock & trg_idx.int2On >= start_block));
     estimrespCue_block = trg_idx.estimrespCue(find(trg_idx.estimrespCue <= currBlock & trg_idx.estimrespCue >= start_block));
-    estimresp_block =  trg_idx.estimresp(find(trg_idx.estimresp <= currBlock & trg_idx.estimresp >= start_block));
-    fb_block = trg_idx.fb(find(trg_idx.fb <= currBlock & trg_idx.fb >= start_block));
+    intermDelay_block = trg_idx.intermDelay(find(trg_idx.intermDelay <= currBlock & trg_idx.intermDelay >= start_block));
+    intermResp_block = trg_idx.intermResp(find(trg_idx.intermResp <= currBlock & trg_idx.intermResp >= start_block));
+    estimResp_block =  trg_idx.estimResp(find(trg_idx.estimResp <= currBlock & trg_idx.estimResp >= start_block));
+    trialEnd_block =  trg_idx.end(find(trg_idx.end <= currBlock & trg_idx.end >= start_block));
     sampleOn_block = trg_idx.sampleOn(find(trg_idx.sampleOn <= currBlock & trg_idx.sampleOn >= start_block));
+    sampleOff_block = trg_idx.sampleOn(find(trg_idx.sampleOff <= currBlock & trg_idx.sampleOff >= start_block));
     
-    % Remove response go cues and trial onset triggers before actual block start
-trg_idx.trialOn = trg_idx.trialOn(trg_idx.trialOn >= trg_idx.startBlock(1));
-trg_idx.estimrespCue = trg_idx.estimrespCue(trg_idx.estimrespCue >= trg_idx.startBlock(1));
-trg_idx.int1On = trg_idx.int1On(trg_idx.int1On >= trg_idx.startBlock(1));
-trg_idx.int2On = trg_idx.int2On(trg_idx.int2On >= trg_idx.startBlock(1));
-trg_idx.intermrespCue = trg_idx.intermrespCue(trg_idx.intermrespCue >= trg_idx.startBlock(1));
-trg_idx.intermDelay = trg_idx.intermDelay(trg_idx.intermDelay >= trg_idx.startBlock(1));
-trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn >= trg_idx.startBlock(1));
-trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1));
     
     % Remove one trialOn_block, if block was interrupted, SInce no response
     % was given in the last trial for pressing "Esc"
-    if length(estimrespCue_block) > length(estimresp_block)
+    if length(estimrespCue_block) > length(estimResp_block)
+        keyboard
         trialOn_block(end) = [];
         estimrespCue_block(end) = [];
     end
@@ -309,19 +313,13 @@ trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1)
     
     % Setting the sample from MEG data into "trial_info"
     trl_behavIdx = length(trials_behavBlock);
-    
-    %     if strcmp(ID,'XUE-2_04') && nblock == 7
-    %         loop_vec = length(trialOn_block):-1:1;
-    %         loop_vec(62) = [];
-    %     else
     loop_vec = length(trialOn_block):-1:1;
-    %end
     
     for i = loop_vec
         %for i =  length(trialOn_block):-1:63
         % Check whether numer of samples are the same for meg & behav
         num_samp_trl = find(sampleOn_block>trialOn_block(i) & sampleOn_block<estimrespCue_block(i));
-        if length(num_samp_trl) <= 10 % Something went wrong - more than 10 samples between trialOn and respCue
+        if length(num_samp_trl) < 12 % Something went wrong - more than 10 samples between trialOn and respCue
             while ~(length(num_samp_trl) ==  trials_behavBlock(trl_behavIdx,3))
                 trl_behavIdx = trl_behavIdx - 1;
                 if trl_behavIdx < 0, err = 1; break, end
@@ -353,7 +351,7 @@ trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff >= trg_idx.startBlock(1)
         end
         
         % Determine where the trial ends (default response cue)
-        k = estimrespCue_block(ntrial_meg);
+        k = trialEnd_block(ntrial_meg);
         if isfield(cfgin.trialdef, 'poststim')
             trlEnd = event(k).sample + round(cfgin.trialdef.poststim*hdr.Fs);  % Shift trial end
         else
@@ -379,16 +377,11 @@ startSamples_mat = max([ones(length(startBlockSamp),1),(startBlockSamp + offset_
 endSamples_mat = endBlockSamp + round(10*hdr.Fs); % Shift trial end
 endSamples_mat = min([event(end).sample*ones(length(endBlockSamp),1), (endBlockSamp + round(10*hdr.Fs))'],[],2);
 
-% Extract drug condition for this session
-drug_cond = drug_cond{1};
-drug = drug_cond(str2double(cfgin.session));
-
 cfgin.trl = trl;
 cfgin.trialInfoLabel = {'startSample','endSample','offset','session','block', 'trial',...
-    'samples','correct_choice','subjects_choice','correct_false','RT','hazard_rate','drug'};
+    'samples','gen_mean_trial','sample_mean_int1','sample_mean_int2','interm_resp',...
+    'interm_resp_accu','interm_cue','estim_resp'};
 cfgin.blockBound_trl = [startSamples_mat endSamples_mat offset_mat*ones(length(startSamples_mat),1)];
-cfgin.drug = drug;
-cfgin.HR = gen.H;
 cfgin.event = event;
 
 end % End of entire function

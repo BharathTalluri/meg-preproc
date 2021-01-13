@@ -80,7 +80,9 @@ firstBl = info_EL_blocks(idx_file,1);
 lastBl = info_EL_blocks(idx_file,2);
 firstBl = firstBl + 1;
 lastBl = lastBl-2;
+block_idx = 0;
 for block = firstBl:lastBl
+    block_idx = block_idx + 1;
     
     fprintf('\n\n ---------------- \n Loop through BLOCK #%d...\n ---------------- \n\n', block)
     
@@ -158,10 +160,10 @@ for block = firstBl:lastBl
     data_cl = ft_rejectcomponent(cfg, comp, data);
     
     % Separate current block ! ACTUALBLOCK CORRECT?
-    cfgtrial.trl = cfgtrial.alltrl(cfgtrial.alltrl(:,5)==actualblock,:);
+    cfgtrial.trl = cfgtrial.alltrl(cfgtrial.alltrl(:,5)==block,:);
     
     % Substract block onset from all sample numbers (except for offset) in the trial matrix
-    cfgtrial.trl(:,1:2) = cfgtrial.trl(:,1:2) - cfgtrial.blockBound_trl(block,1);
+    cfgtrial.trl(:,1:2) = cfgtrial.trl(:,1:2) - cfgtrial.blockBound_trl(block_idx,1);
     
     % Segment block's data into trials
     trials = ft_redefinetrial(cfgtrial, data_cl);
@@ -223,7 +225,7 @@ for block = firstBl:lastBl
     trials = ft_selectdata(cfg, trials);
     
     % Concatenate blocks
-    if block == 1
+    if block == firstBl
         old_trials = trials;
     else
         cfg = [];
@@ -231,11 +233,7 @@ for block = firstBl:lastBl
     end
 end
 
-% Define path/folder to save cleaned data
-if strcmp(ID(1:5),'JBK-1')
-    ID(1:5) = 'JPK-1';
-end
-mat_name = ['/mnt/homes/home024/jschipp/Surprise_Drug/meg_analysis/data_trials/' ID(1:3) '/'];
+mat_name = ['/mnt/homes/home024/btalluri/confirmation_spatial/data/meg/analysis/data_trials/' ID(1:7) '/'];
 
 if 7==exist(mat_name,'dir')
     cd(mat_name)
@@ -248,8 +246,8 @@ end
 all_trials_cl = old_trials;
 
 all_trials_cl.trialInfoLabel = cfgtrial.trialInfoLabel(:,4:11);
-all_trials_cl.drug = cfgtrial.drug;
-all_trials_cl.HR = cfgtrial.HR;
+% all_trials_cl.drug = cfgtrial.drug;
+% all_trials_cl.HR = cfgtrial.HR;
 all_trials_cl.blockBounds = cfgtrial.blockBound_trl;
 
 clear old_trials;
