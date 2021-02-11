@@ -166,8 +166,8 @@ for i = 1:length(trg_idx.startBlock)
 end
 
 % Remove start and end triggers for those blocks
-startBlockSamp(trg_idx.startBlock == 0) = [];
-endBlockSamp(trg_idx.endBlock == 0) = [];
+% startBlockSamp(trg_idx.startBlock == 0) = [];
+% endBlockSamp(trg_idx.endBlock == 0) = [];
 trg_idx.startBlock(trg_idx.startBlock == 0) = [];
 trg_idx.endBlock(trg_idx.endBlock == 0) = [];
 
@@ -199,6 +199,9 @@ if 1
     trg_idx.sampleOn = trg_idx.sampleOn(trg_idx.sampleOn <= trg_idx.endBlock(end));
     trg_idx.sampleOff = trg_idx.sampleOff(trg_idx.sampleOff <= trg_idx.endBlock(end));
 end
+
+startBlockSamp = [event(trg_idx.startBlock).sample];
+endBlockSamp = [event(trg_idx.endBlock).sample];
 
 % % Check whether the actual end is interrupted
 % if trg_idx.trialOn(end) > trg_idx.estimrespCue(end)
@@ -234,8 +237,6 @@ end
 % trg_idx.respCue(trg_idx.respCue == 0) = [];
 % trg_idx.trialOn(trg_idx.trialOn == 0) = [];
 
-
-
 % if length(trg_idx.resp) > length(trg_idx.trialOn)
 % for i = 1:length(trg_idx.trialOn)
 %     if trg_idx.resp(i)<trg_idx.trialOn(i)
@@ -244,8 +245,6 @@ end
 %     end
 % end
 % end
-
-
 
 %__________________________________________________________________________
 
@@ -293,24 +292,7 @@ for start_block = trg_idx.startBlock'
         trialOn_block(end) = [];
         estimrespCue_block(end) = [];
     end
-    
-    % !!! Exception - Something weird happend in trial 62, to make sure
-    % that alignment is still correct, remove trials from 62-end
-    if strcmp(ID,'XUE-2_04') && nblock == 7
-        estimrespCue_block(62:end) = []; trialOn_block(62:end) = [];
-        trials_behavBlock = trials_behavBlock(1:61,:);
-    end
-    
-    % !!! Exception - recording started after 7th trials
-    if strcmp(ID,'HFK-1_02') && nblock == 1
-        trials_behavBlock = trials_behavBlock(7:end,:);
-    end
-    
-    % !!! Exception
-    if strcmp(ID,'CYK-3_05') && nblock == 6
-        trials_behavBlock = trials_behavBlock(11:end,:);
-    end
-    
+       
     % Setting the sample from MEG data into "trial_info"
     trl_behavIdx = length(trials_behavBlock);
     loop_vec = length(trialOn_block):-1:1;
@@ -341,13 +323,18 @@ for start_block = trg_idx.startBlock'
         trl_behavIdx = find(trials_behavBlock(:,4) == i,4);
         %ntrial_block = trials_behavBlock(trl_behavIdx, 2);
         
+        %%%%%%%%%%%%%%%%%%%%
+        % Here, the trial starts with the onset of interval 1; alternately,
+        % a trial could also start at the baseline period
+        %%%%%%%%%%%%%%%%%%%%
+        i1 = int1On_block(ntrial_meg);
         % Determine where the trial starts with respect to the event
         if isfield(cfgin.trialdef, 'prestim')
             trlOff = round(-cfgin.trialdef.prestim*hdr.Fs);
-            trlStart = event(i).sample + trlOff; % Shift trial start
+            trlStart = event(i1).sample + trlOff; % Shift trial start
         else
-            trlOff = event(i).offset;
-            trlStart = event(i).sample;
+            trlOff = event(i1).offset;
+            trlStart = event(i1).sample;
         end
         
         % Determine where the trial ends (default response cue)
@@ -358,8 +345,16 @@ for start_block = trg_idx.startBlock'
             trlEnd = event(k).sample;
         end
         
+        % Determine when interval 1 starts
+        i1 = int1On_block(ntrial_meg);
+        int1Start = event(i1).sample;
+        
+        % Determine when interval 2 starts
+        i2 = int2On_block(ntrial_meg);
+        int2Start = event(i2).sample;
+        
         % Concatenate information
-        new_trial = [trlStart trlEnd trlOff str2num(session) trials_behavBlock(ntrial_meg,:)];
+        new_trial = [trlStart trlEnd trlOff str2num(session) trials_behavBlock(ntrial_meg,:) int1Start int2Start];
         block_trl = [block_trl; new_trial];
         
     end % End of meg trial loop
@@ -380,7 +375,7 @@ endSamples_mat = min([event(end).sample*ones(length(endBlockSamp),1), (endBlockS
 cfgin.trl = trl;
 cfgin.trialInfoLabel = {'startSample','endSample','offset','session','block', 'trial',...
     'samples','gen_mean_trial','sample_mean_int1','sample_mean_int2','interm_resp',...
-    'interm_resp_accu','interm_cue','estim_resp'};
+    'interm_resp_accu','interm_cue','estim_resp','int1startSample', 'int2startSample'};
 cfgin.blockBound_trl = [startSamples_mat endSamples_mat offset_mat*ones(length(startSamples_mat),1)];
 cfgin.event = event;
 

@@ -71,7 +71,7 @@ cfgtrial = rmfield(cfgtrial,'trl');
 
 % Downsample originally created trial matrix
 cfgtrial.alltrl(:,1:3) = round(cfgtrial.alltrl(:,1:3)/1200*400);
-
+cfgtrial.alltrl(:,end-1:end) = round(cfgtrial.alltrl(:,end-1:end)/1200*400);
 % Downsample the block bounds
 cfgtrial.blockBound_trl = round(cfgtrial.blockBound_trl/1200*400);
 
@@ -163,7 +163,7 @@ for block = firstBl:lastBl
     cfgtrial.trl = cfgtrial.alltrl(cfgtrial.alltrl(:,5)==block,:);
     
     % Substract block onset from all sample numbers (except for offset) in the trial matrix
-    cfgtrial.trl(:,1:2) = cfgtrial.trl(:,1:2) - cfgtrial.blockBound_trl(block_idx,1);
+    cfgtrial.trl(:,[1:2, end-1:end]) = cfgtrial.trl(:,[1:2, end-1:end]) - cfgtrial.blockBound_trl(block_idx,1);
     
     % Segment block's data into trials
     trials = ft_redefinetrial(cfgtrial, data_cl);
@@ -224,6 +224,9 @@ for block = firstBl:lastBl
     % Remove these trials
     trials = ft_selectdata(cfg, trials);
     
+    % Make trials.sampleinfo sample marks relative to dataset onset (rather than block onset)
+    trials.sampleinfo = trials.sampleinfo + cfgtrial.blockBound_trl(block_idx,1);
+    trials.trialinfo(:, end-1:end) = trials.trialinfo(:, end-1:end) + cfgtrial.blockBound_trl(block_idx,1);
     % Concatenate blocks
     if block == firstBl
         old_trials = trials;
@@ -245,9 +248,7 @@ end
 % Rename
 all_trials_cl = old_trials;
 
-all_trials_cl.trialInfoLabel = cfgtrial.trialInfoLabel(:,4:11);
-% all_trials_cl.drug = cfgtrial.drug;
-% all_trials_cl.HR = cfgtrial.HR;
+all_trials_cl.trialInfoLabel = cfgtrial.trialInfoLabel(:,4:end);
 all_trials_cl.blockBounds = cfgtrial.blockBound_trl;
 
 clear old_trials;
